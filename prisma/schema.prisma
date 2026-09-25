@@ -1,0 +1,93 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Room {
+  id             String         @id @default(uuid())
+  roomCode       String         @unique
+  name           String
+  status         String         @default("setup") // setup, live, exchange_window, frozen
+  minTeamSize    Int            @default(11)
+  maxTeamSize    Int            @default(15)
+  deadlineDate   DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  teams          Team[]
+  players        Player[]
+  auctionRounds  AuctionRound[]
+  trades         Trade[]
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  roomId      String
+  name        String
+  secretCode  String   @unique
+  poolLimit   Int
+  captainName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  players     Player[]
+}
+
+model Player {
+  id          String   @id @default(uuid())
+  roomId      String
+  playerId    String   // Admin-defined ID
+  name        String
+  category    String
+  basePrice   Int
+  photo       String?
+  status      String   @default("unsold") // unsold, in_auction, sold, skipped
+  soldToTeamId String?
+  soldPrice   Int?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  soldToTeam  Team?    @relation(fields: [soldToTeamId], references: [id])
+}
+
+model AuctionRound {
+  id          String   @id @default(uuid())
+  roomId      String
+  category    String
+  status      String   @default("pending") // pending, active, completed
+  playerOrder String[] // Array of player UUIDs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model BidLog {
+  id        String   @id @default(uuid())
+  roomId    String
+  playerId  String
+  teamId    String
+  amount    Int
+  timestamp DateTime @default(now())
+}
+
+model Trade {
+  id          String   @id @default(uuid())
+  roomId      String
+  teamAId     String
+  playerAId   String
+  teamBId     String
+  playerBId   String
+  status      String   @default("proposed") // proposed, accepted, rejected
+  proposedAt  DateTime @default(now())
+  respondedAt DateTime?
+
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
